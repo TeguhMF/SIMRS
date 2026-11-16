@@ -2,16 +2,20 @@ import React, { useState, useEffect } from 'react';
 import MainLayout from '../components/MainLayout';
 import api from '../api/axios';
 import { 
+  Trash2, 
+  Lock,
   UserPlus, 
   Search, 
   CheckCircle2, 
   AlertCircle, 
   FileText,
-  Users
+  Users,
+  ClipboardList
 } from 'lucide-react';
 
 export default function PendaftaranFO() {
   const [pasiens, setPasiens] = useState([]);
+  const [pendaftarans, setPendaftarans] = useState([]);
   const [dokters, setDokters] = useState([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(false);
@@ -38,22 +42,36 @@ export default function PendaftaranFO() {
   const [msg, setMsg] = useState({ type: '', text: '' });
   const [isModalPasienOpen, setIsModalPasienOpen] = useState(false);
 
-  // Fetch Data Pasien & Dokter
+  // Fetch Data Master Pasien
   const fetchPasiens = async (keyword = '') => {
     try {
       const res = await api.get(`/pasiens?search=${keyword}`);
-      setPasiens(res.data.data.data);
+      const list = res.data?.data?.data || res.data?.data || res.data || [];
+      setPasiens(Array.isArray(list) ? list : []);
     } catch (err) {
       console.error(err);
     }
   };
 
+  // Fetch Data Antrean Pendaftaran (Kunjungan)
+  const fetchPendaftarans = async () => {
+    try {
+      const res = await api.get('/pendaftarans');
+      const list = res.data?.data?.data || res.data?.data || res.data || [];
+      setPendaftarans(Array.isArray(list) ? list : []);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  // Fetch Data Dokter
   const fetchDokters = async () => {
     try {
       const res = await api.get('/dokters');
-      setDokters(res.data.data);
-      if (res.data.data.length > 0) {
-        setFormPendaftaran(prev => ({ ...prev, dokter_id: res.data.data[0].id }));
+      const list = res.data?.data || res.data || [];
+      setDokters(list);
+      if (list.length > 0) {
+        setFormPendaftaran(prev => ({ ...prev, dokter_id: list[0].id }));
       }
     } catch (err) {
       console.error(err);
@@ -62,6 +80,7 @@ export default function PendaftaranFO() {
 
   useEffect(() => {
     fetchPasiens();
+    fetchPendaftarans();
     fetchDokters();
   }, []);
 
@@ -78,7 +97,7 @@ export default function PendaftaranFO() {
 
     try {
       const res = await api.post('/pasiens', formPasien);
-      setMsg({ type: 'success', text: res.data.message });
+      setMsg({ type: 'success', text: res.data.message || 'Pasien baru berhasil ditambahkan.' });
       setIsModalPasienOpen(false);
       setFormPasien({ nik: '', nama_lengkap: '', jenis_kelamin: 'L', tanggal_lahir: '', alamat: '', no_hp: '', golongan_darah: 'O' });
       fetchPasiens();
@@ -105,12 +124,30 @@ export default function PendaftaranFO() {
         pasien_id: selectedPasien.id,
         ...formPendaftaran
       });
-      setMsg({ type: 'success', text: res.data.message });
+      setMsg({ type: 'success', text: res.data.message || 'Pasien berhasil didaftarkan ke antrean.' });
       setSelectedPasien(null);
+      fetchPendaftarans(); // Refresh tabel antrean
     } catch (err) {
       setMsg({ type: 'error', text: err.response?.data?.message || 'Gagal membuat pendaftaran.' });
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Batalkan Antrean Pendaftaran (Khusus status MENUNGGU_TTV)
+  const handleBatalkanAntrean = async (item) => {
+    const namaPasien = item.pasien?.nama_lengkap || item.pasien?.nama || 'pasien ini';
+    if (!window.confirm(`Yakin ingin membatalkan antrean ${item.no_pendaftaran} atas nama ${namaPasien}?`)) {
+      return;
+    }
+
+    setMsg({ type: '', text: '' });
+    try {
+      const res = await api.delete(`/pendaftarans/${item.id}`);
+      setMsg({ type: 'success', text: res.data?.message || 'Antrean pendaftaran berhasil dibatalkan.' });
+      fetchPendaftarans();
+    } catch (err) {
+      setMsg({ type: 'error', text: err.response?.data?.message || 'Gagal membatalkan antrean pasien.' });
     }
   };
 
@@ -127,19 +164,21 @@ export default function PendaftaranFO() {
               {msg.type === 'success' ? <CheckCircle2 className="w-4 h-4 text-emerald-600" /> : <AlertCircle className="w-4 h-4 text-red-600" />}
               <span>{msg.text}</span>
             </div>
-            <button onClick={() => setMsg({ type: '', text: '' })} className="text-slate-400 hover:text-slate-600 font-bold">×</button>
+            <button onClick={() => setMsg({ type: '', text: '' })} className="text-slate-400 hover:text-slate-600 font-bold cursor-pointer">×</button>
           </div>
         )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           
-          {/* Kolom Kiri: Pencarian & Master Pasien */}
-          <div className="lg:col-span-2 space-y-3">
+          {/* Kolom Kiri: Pencarian Master Pasien & Daftar Antrean */}
+          <div className="lg:col-span-2 space-y-4">
+            
+            {/* Card 1: Pencarian Master Pasien */}
             <div className="bg-white p-3.5 rounded-xl border border-slate-200/80 shadow-xs">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="font-bold text-slate-800 text-xs flex items-center gap-1.5">
                   <Users className="w-4 h-4 text-emerald-700" />
-                  <span>Pencarian Pasien</span>
+                  <span>Pencarian Master Pasien</span>
                 </h3>
                 <button 
                   onClick={() => setIsModalPasienOpen(true)}
@@ -167,10 +206,10 @@ export default function PendaftaranFO() {
                 </button>
               </form>
 
-              {/* Tabel Pasien */}
-              <div className="overflow-x-auto border border-slate-200/80 rounded-lg">
+              {/* Tabel Master Pasien */}
+              <div className="overflow-x-auto max-h-60 overflow-y-auto border border-slate-200/80 rounded-lg">
                 <table className="w-full text-left text-xs">
-                  <thead className="bg-slate-50 text-slate-500 font-semibold text-[10px] uppercase border-b border-slate-200">
+                  <thead className="bg-slate-50 text-slate-500 font-semibold text-[10px] uppercase border-b border-slate-200 sticky top-0">
                     <tr>
                       <th className="p-2.5">No. RM</th>
                       <th className="p-2.5">NIK & Nama</th>
@@ -213,6 +252,83 @@ export default function PendaftaranFO() {
                 </table>
               </div>
             </div>
+
+            {/* Card 2: Daftar Antrean Kunjungan & Pembatalan */}
+            <div className="bg-white p-3.5 rounded-xl border border-slate-200/80 shadow-xs">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-bold text-slate-800 text-xs flex items-center gap-1.5">
+                  <ClipboardList className="w-4 h-4 text-emerald-700" />
+                  <span>Antrean Kunjungan Terdaftar ({pendaftarans.length})</span>
+                </h3>
+                <span className="text-[10px] text-slate-400">Pembatalan hanya aktif sebelum pemeriksaan TTV</span>
+              </div>
+
+              <div className="overflow-x-auto max-h-80 overflow-y-auto border border-slate-200/80 rounded-lg">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-slate-50 text-slate-500 font-semibold text-[10px] uppercase border-b border-slate-200 sticky top-0">
+                    <tr>
+                      <th className="p-2.5">No. Registrasi</th>
+                      <th className="p-2.5">Pasien</th>
+                      <th className="p-2.5">Penjamin</th>
+                      <th className="p-2.5">Status</th>
+                      <th className="p-2.5 text-center">Aksi</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {pendaftarans.length === 0 ? (
+                      <tr>
+                        <td colSpan="5" className="p-4 text-center text-slate-400">Belum ada antrean kunjungan.</td>
+                      </tr>
+                    ) : (
+                      pendaftarans.map((item) => (
+                        <tr key={item.id} className="hover:bg-slate-50 transition">
+                          <td className="p-2.5 font-mono font-bold text-slate-700">{item.no_pendaftaran}</td>
+                          <td className="p-2.5">
+                            <span className="block font-semibold text-slate-800">{item.pasien?.nama_lengkap || '-'}</span>
+                            <span className="block text-[10px] font-mono text-slate-400">{item.pasien?.no_rm || ''}</span>
+                          </td>
+                          <td className="p-2.5">
+                            <span className="px-2 py-0.5 bg-slate-100 text-slate-700 rounded text-[10px] font-semibold">
+                              {item.jenis_penjamin}
+                            </span>
+                          </td>
+                          <td className="p-2.5">
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                              item.status === 'MENUNGGU_TTV' 
+                                ? 'bg-amber-50 text-amber-700 border border-amber-200' 
+                                : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                            }`}>
+                              {item.status}
+                            </span>
+                          </td>
+                          <td className="p-2.5 text-center">
+                            {item.status === 'MENUNGGU_TTV' ? (
+                              <button
+                                onClick={() => handleBatalkanAntrean(item)}
+                                title="Batalkan Antrean"
+                                className="inline-flex items-center gap-1 px-2.5 py-1 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 rounded-md text-[11px] font-semibold transition cursor-pointer"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                                <span>Batalkan</span>
+                              </button>
+                            ) : (
+                              <span
+                                title="Sudah masuk pemeriksaan, tidak dapat dibatalkan"
+                                className="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-100 text-slate-400 border border-slate-200 rounded-md text-[10px] font-medium select-none"
+                              >
+                                <Lock className="w-3 h-3" />
+                                <span>Terkunci</span>
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
           </div>
 
           {/* Kolom Kanan: Form Pendaftaran Kunjungan */}
@@ -295,7 +411,7 @@ export default function PendaftaranFO() {
             <div className="bg-white rounded-xl border border-slate-200 shadow-2xl w-full max-w-lg overflow-hidden">
               <div className="p-4 bg-emerald-900 text-white flex items-center justify-between">
                 <h3 className="font-bold text-xs uppercase tracking-wider">Registrasi Pasien Baru</h3>
-                <button onClick={() => setIsModalPasienOpen(false)} className="text-emerald-200 hover:text-white font-bold">×</button>
+                <button onClick={() => setIsModalPasienOpen(false)} className="text-emerald-200 hover:text-white font-bold cursor-pointer">×</button>
               </div>
 
               <form onSubmit={handleCreatePasien} className="p-4 space-y-3">
