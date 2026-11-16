@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import MainLayout from '../components/MainLayout';
 import api from '../api/axios';
-import { Pill, CheckCircle2, AlertCircle, Clock, ArrowRight, RefreshCw, FlaskConical } from 'lucide-react';
+import { Pill, CheckCircle2, AlertCircle, Clock, ArrowRight, RefreshCw } from 'lucide-react';
 
 export default function Farmasi() {
   const [antrean, setAntrean] = useState([]);
@@ -13,7 +13,6 @@ export default function Farmasi() {
   const fetchAntrean = async () => {
     try {
       const res = await api.get('/farmasi/antrean');
-      console.log("Data Antrean Farmasi dari API:", res.data.data);
       setAntrean(res.data.data || []);
     } catch (err) {
       console.error("Gagal mengambil antrean farmasi:", err);
@@ -70,7 +69,7 @@ export default function Farmasi() {
                 </h3>
                 <button 
                   onClick={fetchAntrean}
-                  className="p-1 text-slate-500 hover:text-emerald-600 text-xs flex items-center gap-1 border rounded px-2"
+                  className="p-1 text-slate-500 hover:text-emerald-600 text-xs flex items-center gap-1 border rounded px-2 cursor-pointer"
                 >
                   <RefreshCw className="w-3 h-3" /> Reload
                 </button>
@@ -118,7 +117,9 @@ export default function Farmasi() {
                   <div>
                     <span className="text-[10px] font-bold text-emerald-800 uppercase block">Resep Obat Pasien:</span>
                     <h3 className="font-bold text-slate-900 text-base">{selectedPasien.pasien?.nama_lengkap}</h3>
-                    <p className="font-mono text-[10px] text-slate-500">{selectedPasien.pasien?.no_rm} • Dokter: {selectedPasien.dokter?.nama || '-'}</p>
+                    <p className="font-mono text-[10px] text-slate-500">
+                      {selectedPasien.pasien?.no_rm} • Dokter: {selectedPasien.dokter?.name || '-'}
+                    </p>
                   </div>
                   <span className="px-2.5 py-1 bg-emerald-100 text-emerald-800 rounded font-mono text-xs font-bold border border-emerald-200">
                     {selectedPasien.status}

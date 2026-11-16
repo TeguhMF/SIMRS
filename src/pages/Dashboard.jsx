@@ -91,14 +91,14 @@ export default function Dashboard() {
   };
 
   return (
-    <MainLayout title="Dashboard Pelayanan SIMRS">
+    <MainLayout title="Dashboard">
       <div className="space-y-4">
         
         {/* Banner Identitas Tim Tugas Kuliah */}
         <div className="bg-gradient-to-r from-emerald-900 via-emerald-800 to-slate-900 p-4 rounded-xl text-white shadow-md border border-emerald-700">
           <div className="flex items-center gap-2 mb-2 pb-2 border-b border-emerald-700/60">
             <GraduationCap className="w-5 h-5 text-emerald-300" />
-            <h2 className="font-extrabold text-sm tracking-wide uppercase">Tugas Kelompok Pengembangan SIMRS Medica</h2>
+            <h2 className="font-extrabold text-sm tracking-wide uppercase">Kelompok 8 SIMRS</h2>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">

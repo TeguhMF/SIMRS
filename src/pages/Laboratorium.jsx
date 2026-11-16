@@ -14,7 +14,6 @@ export default function Laboratorium() {
   const fetchAntrean = async () => {
     try {
       const res = await api.get('/lab/antrean');
-      console.log("Data Antrean Lab dari API:", res.data.data); // Cek F12 Console
       setAntrean(res.data.data || []);
     } catch (err) {
       console.error("Gagal mengambil antrean lab:", err);
@@ -85,7 +84,7 @@ export default function Laboratorium() {
                 </h3>
                 <button 
                   onClick={fetchAntrean}
-                  className="p-1 text-slate-500 hover:text-purple-600 text-xs flex items-center gap-1 border rounded px-2"
+                  className="p-1 text-slate-500 hover:text-purple-600 text-xs flex items-center gap-1 border rounded px-2 cursor-pointer"
                 >
                   <RefreshCw className="w-3 h-3" /> Reload
                 </button>
@@ -133,7 +132,9 @@ export default function Laboratorium() {
                   <div>
                     <span className="text-[10px] font-bold text-purple-800 uppercase block">Pasien Laboratorium:</span>
                     <h3 className="font-bold text-slate-900 text-base">{selectedPasien.pasien?.nama_lengkap}</h3>
-                    <p className="font-mono text-[10px] text-slate-500">{selectedPasien.pasien?.no_rm} • Dokter: {selectedPasien.dokter?.nama || '-'}</p>
+                    <p className="font-mono text-[10px] text-slate-500">
+                      {selectedPasien.pasien?.no_rm} • Dokter: {selectedPasien.dokter?.name || '-'}
+                    </p>
                   </div>
                   <span className="px-2.5 py-1 bg-purple-100 text-purple-800 rounded font-mono text-xs font-bold border border-purple-200">
                     {selectedPasien.status}
